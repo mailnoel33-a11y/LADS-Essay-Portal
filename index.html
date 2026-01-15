@@ -10,7 +10,7 @@
 /* GENERAL STYLES */
 .hidden { display: none; }
 article { margin-top: 1rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; cursor: pointer; }
-article:hover { background: #000020; }
+article:hover { background: #111; } /* Hover color for student row */
 nav.tabs ul { display: flex; gap: 1rem; }
 nav.tabs ul li { list-style: none; }
 
@@ -23,11 +23,12 @@ input[type="text"].essay-input {
 
 /* ESSAY DISPLAY */
 .essay-text {
-  Black-space: pre-wrap;
+  white-space: pre-wrap;
   font-family: abadi;
   padding: 0.5rem;
   border: 1px solid #ccc;
   background: #000000;
+  color: #ffffff;
   margin-top: 0.5rem;
 }
 
@@ -181,13 +182,19 @@ function loadEssays(){
     .filter(e => e.author.toLowerCase().includes(search) || e.genres.join(" ").toLowerCase().includes(search))
     .forEach((essay,index)=>{
       const article = document.createElement("article");
+
       article.innerHTML = `
         <strong>${essay.author}</strong> — ${essay.genres.join(", ")}
         <div id="expanded-${index}" class="expanded hidden"></div>
       `;
-      article.addEventListener('click',()=>{
-        toggleEssay(index);
+
+      // Toggle only when click is outside buttons/inputs/textareas/selects
+      article.addEventListener("click", (e)=>{
+        if(!e.target.closest("button") && !e.target.closest("input") && !e.target.closest("textarea") && !e.target.closest("select")){
+          toggleEssay(index);
+        }
       });
+
       list.appendChild(article);
     });
 }
@@ -225,15 +232,16 @@ function toggleEssay(index){
       <option value="4">4 ⭐⭐⭐⭐</option>
       <option value="5">5 ⭐⭐⭐⭐⭐</option>
     </select>
-    <button onclick="addReaction(${index})">React</button>
-    <button class="edit-btn" onclick="editEssay(${index})">Edit Essay</button>
-    <button class="delete-btn" onclick="deleteEssay(${index})">Delete Essay</button>
-    <button id="save-${index}" class="save-btn hidden" onclick="saveEssay(${index})">Save Changes</button>
+    <button onclick="addReaction(event, ${index})">React</button>
+    <button class="edit-btn" onclick="editEssay(event, ${index})">Edit Essay</button>
+    <button class="delete-btn" onclick="deleteEssay(event, ${index})">Delete Essay</button>
+    <button id="save-${index}" class="save-btn hidden" onclick="saveEssay(event, ${index})">Save Changes</button>
   `;
 }
 
 // ADD REACTION
-function addReaction(index){
+function addReaction(event,index){
+  event.stopPropagation();
   const essays = JSON.parse(localStorage.getItem("essays"));
   const name = document.getElementById(`rname-${index}`).value.trim();
   const studentClass = document.getElementById(`rclass-${index}`).value.trim();
@@ -247,12 +255,13 @@ function addReaction(index){
 
   essays[index].reactions.push({name,class:studentClass,comment,rating});
   localStorage.setItem("essays",JSON.stringify(essays));
-  toggleEssay(index); // collapse
-  toggleEssay(index); // re-expand to refresh
+  toggleEssay(index);
+  toggleEssay(index);
 }
 
 // DELETE ESSAY
-function deleteEssay(index){
+function deleteEssay(event,index){
+  event.stopPropagation();
   const input = prompt("Enter delete password:");
   if(input === DELETE_PASSWORD){
     const essays = JSON.parse(localStorage.getItem("essays")) || [];
@@ -265,8 +274,9 @@ function deleteEssay(index){
   }
 }
 
-// EDIT ESSAY
-function editEssay(index){
+// EDIT ESSAY WITH TAB INDENT
+function editEssay(event,index){
+  event.stopPropagation();
   const input = prompt("Enter edit password:");
   if(input !== EDIT_PASSWORD){
     alert("Incorrect edit password.");
@@ -275,23 +285,38 @@ function editEssay(index){
 
   const expandedDiv = document.getElementById(`expanded-${index}`);
   const essayTextDiv = expandedDiv.querySelector(".essay-text");
-  const currentText = essayTextDiv.textContent;
 
-  const textarea = document.createElement("textarea");
-  textarea.id = `text-${index}`;
-  textarea.value = currentText;
-  textarea.style.width="100%";
-  textarea.style.minHeight="150px";
-  textarea.style.fontFamily="monospace";
+  if(!expandedDiv.querySelector(`#text-${index}`)){
+    const currentText = essayTextDiv.textContent;
 
-  essayTextDiv.replaceWith(textarea);
-  expandedDiv.querySelector(`#author-${index}`).disabled=false;
-  expandedDiv.querySelector(`#genres-${index}`).disabled=false;
-  expandedDiv.querySelector(`#save-${index}`).classList.remove('hidden');
+    const textarea = document.createElement("textarea");
+    textarea.id = `text-${index}`;
+    textarea.value = currentText;
+    textarea.style.width="100%";
+    textarea.style.minHeight="150px";
+    textarea.style.fontFamily="monospace";
+
+    // === TAB INDENT FIX ===
+    textarea.addEventListener("keydown", function(e){
+      if(e.key === "Tab"){
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        this.value = this.value.substring(0,start) + "\t" + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 1;
+      }
+    });
+
+    essayTextDiv.replaceWith(textarea);
+    expandedDiv.querySelector(`#author-${index}`).disabled=false;
+    expandedDiv.querySelector(`#genres-${index}`).disabled=false;
+    expandedDiv.querySelector(`#save-${index}`).classList.remove('hidden');
+  }
 }
 
 // SAVE ESSAY
-function saveEssay(index){
+function saveEssay(event,index){
+  event.stopPropagation();
   const essays = JSON.parse(localStorage.getItem("essays"));
   const expandedDiv = document.getElementById(`expanded-${index}`);
   const author = expandedDiv.querySelector(`#author-${index}`).value.trim();
@@ -312,8 +337,7 @@ function saveEssay(index){
   div.textContent=text;
   textEl.replaceWith(div);
 
-  toggleEssay(index); // collapse
-  toggleEssay(index); // re-expand to refresh
+  expandedDiv.querySelector(`#save-${index}`).classList.add('hidden');
   alert("Essay updated successfully!");
 }
 
@@ -329,6 +353,6 @@ essayTextArea.addEventListener("keydown",function(e){
   }
 });
 </script>
+
 </body>
 </html>
-
