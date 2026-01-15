@@ -1,52 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>LADS Essay Portal</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-  .hidden { display: none; }
-  textarea { min-height: 150px; font-family: monospace; }
-  article { margin-top: 2rem; }
-  button.delete-btn { margin-left:10px; color:red; }
-  button.edit-btn { margin-left:10px; color:blue; }
-  nav.tabs ul { display: flex; gap: 1rem; }
-  nav.tabs ul li { list-style: none; }
-  .essay-text { white-space: pre-wrap; } /* preserves line breaks & tabs */
-</style>
+  <!-- ===============================
+       BASIC PAGE SETUP
+       =============================== -->
+  <meta charset="UTF-8">
+  <title>LADS Essay Portal</title>
+
+  <!-- Pico CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+
+  <!-- Responsive viewport -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- ===============================
+       CUSTOM STYLES
+       =============================== -->
+  <style>
+    .hidden { display: none; }
+
+    textarea {
+      min-height: 150px;
+      font-family: monospace;
+    }
+
+    article {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+    }
+
+    button.delete-btn { color: red; }
+    button.edit-btn { color: blue; }
+
+    nav.tabs ul {
+      display: flex;
+      gap: 1rem;
+      list-style: none;
+    }
+
+    .essay-text {
+      white-space: pre-wrap; /* keeps formatting */
+    }
+
+    /* Password eye icons */
+    .eye {
+      cursor: pointer;
+      font-size: 1.2rem;
+      margin-left: .5rem;
+    }
+
+    /* Password modal background */
+    #passwordModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #passwordModal article {
+      max-width: 400px;
+      width: 100%;
+    }
+  </style>
 </head>
+
 <body>
 
 <main class="container">
 
-  <!-- LOGIN -->
+  <!-- ==================================================
+       LOGIN SECTION (CLUB PASSWORD)
+       ================================================== -->
   <section id="login">
     <h2>Club Access</h2>
+
     <p>Enter the club password to continue.</p>
-    <input type="password" id="passwordInput" placeholder="Password">
+
+    <!-- Password input + eye toggle -->
+    <div style="display:flex;align-items:center;">
+      <input type="password" id="passwordInput" placeholder="Password">
+      <span class="eye" onclick="togglePassword('passwordInput', this)">🙈</span>
+    </div>
+
     <button onclick="checkPassword()">Enter</button>
     <p id="error" style="color:red;"></p>
   </section>
 
-  <!-- CONTENT -->
+  <!-- ==================================================
+       MAIN CONTENT (HIDDEN UNTIL LOGIN)
+       ================================================== -->
   <div id="content" class="hidden">
 
-    <!-- TABS -->
+    <!-- ===============================
+         TAB NAVIGATION
+         =============================== -->
     <nav class="tabs">
       <ul>
-        <li><a href="#" onclick="showSection('submitSection')">Submit Essay</a></li>
-        <li><a href="#" onclick="showSection('viewSection')">View Essays</a></li>
+        <li><a onclick="showSection('submitSection')">Submit Essay</a></li>
+        <li><a onclick="showSection('viewSection')">View Essays</a></li>
       </ul>
     </nav>
 
-    <!-- SUBMIT ESSAY -->
+    <!-- ===============================
+         SUBMIT / EDIT ESSAY SECTION
+         =============================== -->
     <section id="submitSection">
-      <h2>Submit an Essay</h2>
-      <input type="text" id="author" placeholder="Your Name and Class" required>
 
-      <label>Select up to 3 genres (Hold Ctrl to select multiple)</label>
-      <select id="genres" multiple>
+      <h2>Submit an Essay</h2>
+
+      <!-- Author -->
+      <input id="authorInput" type="text" placeholder="Your Name and Class">
+
+      <!-- Genres -->
+      <label>Select up to 3 genres</label>
+      <select id="genresSelect" multiple>
         <option>Comedy</option>
         <option>Adventure</option>
         <option>Romance</option>
@@ -61,198 +131,264 @@
         <option>Letters</option>
       </select>
 
-      <textarea id="essayText" placeholder="Write your essay here..." required></textarea>
-      <button onclick="addEssay()">Submit Essay</button>
+      <!-- File upload (TXT only – safest client-side) -->
+      <label>Upload Essay File (TXT only)</label>
+      <input type="file" id="fileUpload" accept=".txt">
+
+      <!-- Essay box -->
+      <textarea id="essayText" placeholder="Write your essay here..."></textarea>
+
+      <!-- Submit / Save button -->
+      <button id="submitBtn" onclick="addEssay()">Submit Essay</button>
     </section>
 
-    <!-- VIEW ESSAYS -->
+    <!-- ===============================
+         VIEW ESSAYS SECTION
+         =============================== -->
     <section id="viewSection" class="hidden">
-      <h2>Search Essays</h2>
-      <input type="search" id="search" placeholder="Search by Name, Class, or Genre" oninput="loadEssays()">
 
-      <h2>Submitted Essays</h2>
+      <!-- Search -->
+      <input type="search" id="searchInput"
+             placeholder="Search by name or genre"
+             oninput="loadEssays()">
+
+      <!-- Essay output -->
       <div id="essayList"></div>
     </section>
 
   </div>
-
 </main>
 
 <footer class="container">
-  <small>
-    NAPARIMA COLLEGE • LADS • Built for Essay Writing & Essay Appreciation
-  </small>
+  <small>NAPARIMA COLLEGE • LADS</small>
 </footer>
 
+<!-- ==================================================
+     PASSWORD MODAL (EDIT / DELETE)
+     ================================================== -->
+<div id="passwordModal" class="hidden">
+  <article>
+    <h3 id="modalTitle"></h3>
+
+    <div style="display:flex;align-items:center;">
+      <input type="password" id="modalPassword" placeholder="Enter password">
+      <span class="eye" onclick="togglePassword('modalPassword', this)">🙈</span>
+    </div>
+
+    <button onclick="confirmPassword()">Confirm</button>
+    <button onclick="closeModal()">Cancel</button>
+    <p id="modalError" style="color:red;"></p>
+  </article>
+</div>
+
 <script>
-  // === PASSWORDS ===
-  const CLUB_PASSWORD = "iwonderwhomadethis?";
-  const DELETE_PASSWORD = "edititbro";
-  const EDIT_PASSWORD = "tochangeistobe-NB";
+/* =====================================================
+   PASSWORD CONSTANTS (CHANGE HERE ONLY)
+   ===================================================== */
+const CLUB_PASSWORD   = "iwonderwhomadethis?";
+const DELETE_PASSWORD = "DeLeTe-NB";
+const EDIT_PASSWORD   = "EditEdit3P";
 
-  // === LOGIN ===
-  function checkPassword() {
-    const input = document.getElementById("passwordInput").value;
-    if (input === CLUB_PASSWORD) {
-      document.getElementById("login").classList.add("hidden");
-      document.getElementById("content").classList.remove("hidden");
-      showSection('submitSection'); // default tab
-      loadEssays();
-    } else {
-      document.getElementById("error").textContent = "Incorrect password.";
-    }
+/* =====================================================
+   GLOBAL STATE VARIABLES
+   ===================================================== */
+let pendingAction = null;   // holds edit/delete action
+let editingIndex = null;    // index of essay being edited
+
+/* =====================================================
+   PASSWORD VISIBILITY TOGGLE
+   ===================================================== */
+function togglePassword(inputId, icon) {
+  const input = document.getElementById(inputId);
+
+  if (input.type === "password") {
+    input.type = "text";
+    icon.textContent = "👁️";
+  } else {
+    input.type = "password";
+    icon.textContent = "🙈";
   }
+}
 
-  // === TAB SWITCHING ===
-  function showSection(id) {
-    document.getElementById('submitSection').classList.add('hidden');
-    document.getElementById('viewSection').classList.add('hidden');
-    document.getElementById(id).classList.remove('hidden');
-  }
-
-  // === ADD ESSAY ===
-  function addEssay() {
-    const author = document.getElementById("author").value.trim();
-    const text = document.getElementById("essayText").value.trim();
-    const genres = Array.from(document.getElementById("genres").selectedOptions).map(o => o.value);
-
-    if (!author || !text || genres.length === 0 || genres.length > 3) {
-      alert("Fill all fields and select up to 3 genres.");
-      return;
-    }
-
-    const essays = JSON.parse(localStorage.getItem("essays")) || [];
-    essays.push({ author, text, genres, reactions: [] });
-    localStorage.setItem("essays", JSON.stringify(essays));
-
-    document.getElementById("author").value = "";
-    document.getElementById("essayText").value = "";
-    document.getElementById("genres").selectedIndex = -1;
-
-    alert("Essay submitted successfully!");
-  }
-
-  // === LOAD ESSAYS ===
-  function loadEssays() {
-    const list = document.getElementById("essayList");
-    list.innerHTML = "";
-
-    const search = document.getElementById("search").value.toLowerCase();
-    const essays = JSON.parse(localStorage.getItem("essays")) || [];
-
-    essays.filter(e => e.author.toLowerCase().includes(search) || e.genres.join(" ").toLowerCase().includes(search))
-      .forEach((essay, index) => {
-        const article = document.createElement("article");
-        article.innerHTML = `
-          <h3>${essay.author}</h3>
-          <p><strong>Genres:</strong> ${essay.genres.join(", ")}</p>
-          <p class="essay-text">${essay.text}</p>
-
-          <h4>Reactions</h4>
-          <ul>
-            ${essay.reactions.map(r => `<li><strong>${r.name}</strong> (${r.class}) — ${"⭐".repeat(r.rating)}<br>${r.comment}</li>`).join('')}
-          </ul>
-
-          <input id="rname-${index}" placeholder="Your name">
-          <input id="rclass-${index}" placeholder="Your class">
-          <textarea id="rcomment-${index}" placeholder="Your criticism"></textarea>
-
-          <select id="rrating-${index}">
-            <option value="1">1 ⭐</option>
-            <option value="2">2 ⭐⭐</option>
-            <option value="3">3 ⭐⭐⭐</option>
-            <option value="4">4 ⭐⭐⭐⭐</option>
-            <option value="5">5 ⭐⭐⭐⭐⭐</option>
-          </select>
-
-          <button onclick="addReaction(${index})">React</button>
-          <button class="edit-btn" onclick="editEssay(${index})">Edit Essay</button>
-          <button class="delete-btn" onclick="deleteEssay(${index})">Delete Essay</button>
-        `;
-        list.appendChild(article);
-      });
-  }
-
-  // === ADD REACTION ===
-  function addReaction(index) {
-    const essays = JSON.parse(localStorage.getItem("essays"));
-    const name = document.getElementById(`rname-${index}`).value.trim();
-    const studentClass = document.getElementById(`rclass-${index}`).value.trim();
-    const comment = document.getElementById(`rcomment-${index}`).value.trim();
-    const rating = parseInt(document.getElementById(`rrating-${index}`).value);
-
-    if (!name || !studentClass || !comment) {
-      alert("Fill all reaction fields.");
-      return;
-    }
-
-    essays[index].reactions.push({ name, class: studentClass, comment, rating });
-    localStorage.setItem("essays", JSON.stringify(essays));
+/* =====================================================
+   LOGIN LOGIC
+   ===================================================== */
+function checkPassword() {
+  if (passwordInput.value === CLUB_PASSWORD) {
+    login.classList.add("hidden");
+    content.classList.remove("hidden");
+    showSection("submitSection");
     loadEssays();
+  } else {
+    error.textContent = "Incorrect password.";
+  }
+}
+
+/* =====================================================
+   TAB SWITCHING
+   ===================================================== */
+function showSection(id) {
+  submitSection.classList.add("hidden");
+  viewSection.classList.add("hidden");
+  document.getElementById(id).classList.remove("hidden");
+}
+
+/* =====================================================
+   PASSWORD MODAL CONTROLS
+   ===================================================== */
+function openModal(title, action) {
+  modalTitle.textContent = title;
+  modalPassword.value = "";
+  modalError.textContent = "";
+  pendingAction = action;
+  passwordModal.classList.remove("hidden");
+}
+
+function closeModal() {
+  passwordModal.classList.add("hidden");
+}
+
+function confirmPassword() {
+  pendingAction(modalPassword.value);
+}
+
+/* =====================================================
+   ADD ESSAY
+   ===================================================== */
+function addEssay() {
+  const author = authorInput.value.trim();
+  const text   = essayText.value.trim();
+  const genres = [...genresSelect.selectedOptions].map(o => o.value);
+
+  if (!author || !text || genres.length === 0 || genres.length > 3) {
+    alert("Fill all fields correctly.");
+    return;
   }
 
-  // === DELETE ESSAY ===
-  function deleteEssay(index) {
-    const input = prompt("Enter delete password:");
-    if (input === DELETE_PASSWORD) {
-      const essays = JSON.parse(localStorage.getItem("essays")) || [];
-      essays.splice(index, 1);
-      localStorage.setItem("essays", JSON.stringify(essays));
-      loadEssays();
-      alert("Essay deleted successfully.");
-    } else {
-      alert("Incorrect delete password.");
+  const essays = JSON.parse(localStorage.getItem("essays")) || [];
+  essays.push({ author, text, genres });
+  localStorage.setItem("essays", JSON.stringify(essays));
+
+  authorInput.value = "";
+  essayText.value = "";
+  genresSelect.selectedIndex = -1;
+
+  showSection("viewSection");
+  loadEssays();
+}
+
+/* =====================================================
+   LOAD & DISPLAY ESSAYS
+   ===================================================== */
+function loadEssays() {
+  essayList.innerHTML = "";
+  const search = searchInput.value.toLowerCase();
+  const essays = JSON.parse(localStorage.getItem("essays")) || [];
+
+  essays
+    .filter(e =>
+      e.author.toLowerCase().includes(search) ||
+      e.genres.join(" ").toLowerCase().includes(search)
+    )
+    .forEach((e, i) => {
+      const article = document.createElement("article");
+      article.innerHTML = `
+        <h3>${e.author}</h3>
+        <p><strong>Genres:</strong> ${e.genres.join(", ")}</p>
+        <p class="essay-text">${e.text}</p>
+        <button class="edit-btn" onclick="requestEdit(${i})">Edit</button>
+        <button class="delete-btn" onclick="requestDelete(${i})">Delete</button>
+      `;
+      essayList.appendChild(article);
+    });
+}
+
+/* =====================================================
+   EDIT ESSAY (LOAD INTO FORM)
+   ===================================================== */
+function requestEdit(index) {
+  openModal("Enter Edit Password", pwd => {
+    if (pwd !== EDIT_PASSWORD) {
+      modalError.textContent = "Incorrect password.";
+      return;
     }
-  }
 
-  // === EDIT ESSAY ===
-  function editEssay(index) {
-    const input = prompt("Enter edit password:");
-    if (input === EDIT_PASSWORD) {
-      const essays = JSON.parse(localStorage.getItem("essays"));
+    const essays = JSON.parse(localStorage.getItem("essays"));
+    const essay = essays[index];
 
-      const author = prompt("Edit Author/Name:", essays[index].author);
-      const text = prompt("Edit Essay Text:", essays[index].text);
-      const genres = prompt(
-        "Edit Genres (comma-separated, max 3):",
-        essays[index].genres.join(", ")
-      );
+    authorInput.value = essay.author;
+    essayText.value = essay.text;
 
-      if (!author || !text || !genres) {
-        alert("All fields are required.");
-        return;
-      }
+    [...genresSelect.options].forEach(opt => {
+      opt.selected = essay.genres.includes(opt.value);
+    });
 
-      const genreArray = genres.split(",").map(g => g.trim()).slice(0,3);
+    editingIndex = index;
+    submitBtn.textContent = "Save Changes";
+    submitBtn.onclick = saveEditedEssay;
 
-      essays[index] = {
-        ...essays[index],
-        author: author,
-        text: text,
-        genres: genreArray
-      };
-
-      localStorage.setItem("essays", JSON.stringify(essays));
-      loadEssays();
-      alert("Essay updated successfully!");
-    } else {
-      alert("Incorrect edit password.");
-    }
-  }
-
-  // === ALLOW TAB INDENTATION IN TEXTAREA ===
-  const essayTextArea = document.getElementById("essayText");
-  essayTextArea.addEventListener("keydown", function(e) {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const start = this.selectionStart;
-      const end = this.selectionEnd;
-      this.value = this.value.substring(0, start) + "\t" + this.value.substring(end);
-      this.selectionStart = this.selectionEnd = start + 1;
-    }
+    closeModal();
+    showSection("submitSection");
   });
+}
+
+/* =====================================================
+   SAVE EDITED ESSAY
+   ===================================================== */
+function saveEditedEssay() {
+  const essays = JSON.parse(localStorage.getItem("essays"));
+
+  essays[editingIndex] = {
+    author: authorInput.value.trim(),
+    text: essayText.value.trim(),
+    genres: [...genresSelect.selectedOptions].map(o => o.value)
+  };
+
+  localStorage.setItem("essays", JSON.stringify(essays));
+
+  editingIndex = null;
+  submitBtn.textContent = "Submit Essay";
+  submitBtn.onclick = addEssay;
+
+  authorInput.value = "";
+  essayText.value = "";
+  genresSelect.selectedIndex = -1;
+
+  showSection("viewSection");
+  loadEssays();
+}
+
+/* =====================================================
+   DELETE ESSAY
+   ===================================================== */
+function requestDelete(index) {
+  openModal("Enter Delete Password", pwd => {
+    if (pwd !== DELETE_PASSWORD) {
+      modalError.textContent = "Incorrect password.";
+      return;
+    }
+
+    const essays = JSON.parse(localStorage.getItem("essays"));
+    essays.splice(index, 1);
+    localStorage.setItem("essays", JSON.stringify(essays));
+
+    closeModal();
+    loadEssays();
+  });
+}
+
+/* =====================================================
+   FILE UPLOAD (TXT → TEXTAREA)
+   ===================================================== */
+fileUpload.addEventListener("change", () => {
+  const file = fileUpload.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = e => essayText.value = e.target.result;
+  reader.readAsText(file);
+});
 </script>
 
 </body>
 </html>
-
